@@ -254,6 +254,158 @@ def dynamic_programming_grid(rows, cols, obstacles):
     return dp, dp[rows - 1][cols - 1], path
 
 
+def dynamic_programming_grid_steps(rows, cols, obstacles):
+    dp = []
+
+    for row in range(rows):
+        dp.append([])
+        for col in range(cols):
+            dp[row].append(0)
+
+    steps = []
+    start = (0, 0)
+    end = (rows - 1, cols - 1)
+
+    if start in obstacles or end in obstacles:
+        steps.append(([r[:] for r in dp], None, "No valid path because start or end is blocked."))
+        return steps, dp, 0, []
+
+    dp[0][0] = 1
+    steps.append(([r[:] for r in dp], (0, 0), "DP start cell has 1 path."))
+
+    for row in range(rows):
+        for col in range(cols):
+            if row == 0 and col == 0:
+                continue
+
+            if (row, col) in obstacles:
+                dp[row][col] = 0
+                steps.append(([r[:] for r in dp], (row, col), "Obstacle cell cannot be used."))
+                continue
+
+            from_top = 0
+            from_left = 0
+
+            if row > 0:
+                from_top = dp[row - 1][col]
+
+            if col > 0:
+                from_left = dp[row][col - 1]
+
+            dp[row][col] = from_top + from_left
+            steps.append(([r[:] for r in dp], (row, col), "DP updating paths from top and left."))
+
+    final_dp, path_count, path = dynamic_programming_grid(rows, cols, obstacles)
+    return steps, final_dp, path_count, path
+
+
+def coin_change_dp_steps(coins, amount):
+    ways = []
+
+    for i in range(amount + 1):
+        ways.append(0)
+
+    ways[0] = 1
+    steps = []
+    steps.append((ways[:], -1, "Coin Change DP started. ways[0] = 1."))
+
+    for coin in coins:
+        for value in range(coin, amount + 1):
+            ways[value] = ways[value] + ways[value - coin]
+            steps.append((ways[:], value, "Using coin " + str(coin) + " to update amount " + str(value) + "."))
+
+    steps.append((ways[:], -1, "Coin Change completed. Total ways = " + str(ways[amount]) + "."))
+    return steps, ways[amount]
+
+
+def draw_coin_change(screen, font, coins, amount, ways, highlight_amount):
+    start_x = 280
+    start_y = 165
+    cell_width = 50
+    cell_height = 45
+
+    draw_text(screen, "Coin Change DP", font, BLACK, start_x, 120)
+    draw_text(screen, "Coins: " + str(coins), font, BLACK, start_x, 140)
+
+    for value in range(amount + 1):
+        x = start_x + value * cell_width
+
+        amount_rect = pygame.Rect(x, start_y, cell_width, cell_height)
+        ways_rect = pygame.Rect(x, start_y + cell_height, cell_width, cell_height)
+
+        if value == highlight_amount:
+            colour = YELLOW
+        else:
+            colour = WHITE
+
+        pygame.draw.rect(screen, LIGHT_GRAY, amount_rect)
+        pygame.draw.rect(screen, colour, ways_rect)
+
+        pygame.draw.rect(screen, BLACK, amount_rect, 1)
+        pygame.draw.rect(screen, BLACK, ways_rect, 1)
+
+        amount_text = font.render(str(value), True, BLACK)
+        amount_rect_text = amount_text.get_rect(center=amount_rect.center)
+        screen.blit(amount_text, amount_rect_text)
+
+        if value < len(ways):
+            ways_text = font.render(str(ways[value]), True, BLACK)
+        else:
+            ways_text = font.render("0", True, BLACK)
+
+        ways_rect_text = ways_text.get_rect(center=ways_rect.center)
+        screen.blit(ways_text, ways_rect_text)
+
+    draw_text(screen, "Amount", font, BLACK, start_x - 75, start_y + 13)
+    draw_text(screen, "Ways", font, BLACK, start_x - 75, start_y + cell_height + 13)
+
+
+def show_puzzle_help(screen, clock):
+    title_font = pygame.font.SysFont(None, 42)
+    button_font = pygame.font.SysFont(None, 24)
+    small_font = pygame.font.SysFont(None, 22)
+
+    back_button = pygame.Rect(25, 25, 95, 40)
+
+    running = True
+
+    while running:
+        screen.fill(WHITE)
+
+        draw_button(screen, "Back", back_button, button_font, LIGHT_GRAY)
+
+        draw_text(screen, "Help - Puzzle Challenges", title_font, BLACK, 260, 45)
+
+        draw_text(screen, "Pathfinding mode:", small_font, BLACK, 160, 120)
+        draw_text(screen, "1. Choose Start, End, or Obstacle.", small_font, BLACK, 190, 150)
+        draw_text(screen, "2. Click the grid to place it.", small_font, BLACK, 190, 180)
+        draw_text(screen, "3. Click Run to show Dijkstra shortest path.", small_font, BLACK, 190, 210)
+
+        draw_text(screen, "DP mode:", small_font, BLACK, 160, 260)
+        draw_text(screen, "1. Click cells to add obstacles.", small_font, BLACK, 190, 290)
+        draw_text(screen, "2. Start is top-left and end is bottom-right.", small_font, BLACK, 190, 320)
+        draw_text(screen, "3. Click Run to count paths and draw one valid path.", small_font, BLACK, 190, 350)
+
+        draw_text(screen, "Coin DP:", small_font, BLACK, 160, 400)
+        draw_text(screen, "1. Click Coin DP on the right side.", small_font, BLACK, 190, 430)
+        draw_text(screen, "2. Use - and + to change the amount.", small_font, BLACK, 190, 460)
+        draw_text(screen, "3. Click Run to visualise another DP example.", small_font, BLACK, 190, 490)
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                mouse_pos = event.pos
+
+                if back_button.collidepoint(mouse_pos):
+                    running = False
+
+        pygame.display.update()
+        clock.tick(60)
+
+
 def draw_grid(
     screen,
     font,
@@ -268,7 +420,8 @@ def draw_grid(
     obstacles,
     visited_cells,
     path_cells,
-    dp_table
+    dp_table,
+    highlight_cell=None
 ):
     # Loop through every cell
     for row in range(rows):
@@ -299,6 +452,8 @@ def draw_grid(
                 colour = LIGHT_RED
             elif cell in path_cells:
                 colour = YELLOW
+            elif cell == highlight_cell:
+                colour = ORANGE
             elif cell in visited_cells:
                 colour = LIGHT_BLUE
             else:
@@ -335,7 +490,7 @@ def draw_grid(
 def run_puzzle_module(screen, clock):
     #fonts
     title_font = pygame.font.SysFont(None, 42)
-    button_font = pygame.font.SysFont(None, 22)
+    button_font = pygame.font.SysFont(None, 20)
     small_font = pygame.font.SysFont(None, 20)
 
 
@@ -372,27 +527,46 @@ def run_puzzle_module(screen, clock):
     dp_table = None
     path_count = 0
 
+    dp_steps = []
+    highlight_cell = None
+    final_path_cells = []
+
+    coins = [1, 2, 5]
+    coin_amount = 10
+    coin_steps = []
+    coin_table = []
+    for i in range(coin_amount + 1):
+        coin_table.append(0)
+    coin_result = 0
+    coin_highlight = -1
+
     # Animation control
     is_animating = False
     animation_index = 0
     last_step_time = 0
     step_delay = 80
+    animation_type = None
 
     # Message for user
     message = "Pathfinding mode: choose Start, End or Obstacle, then click grid."
 
     # Button
     back_button = pygame.Rect(25, 25, 95, 40)
+    help_button = pygame.Rect(screen.get_width() - 120, 25, 95, 40)
+    coin_button = pygame.Rect(screen.get_width() - 145, 115, 115, 40)
 
-    pathfinding_button = pygame.Rect(70, 520, 130, 40)
-    dp_button = pygame.Rect(210, 520, 90, 40)
+    pathfinding_button = pygame.Rect(50, 520, 120, 40)
+    dp_button = pygame.Rect(180, 520, 70, 40)
 
-    start_button = pygame.Rect(315, 520, 90, 40)
-    end_button = pygame.Rect(415, 520, 80, 40)
-    obstacle_button = pygame.Rect(505, 520, 100, 40)
+    start_button = pygame.Rect(375, 520, 75, 40)
+    end_button = pygame.Rect(460, 520, 65, 40)
+    obstacle_button = pygame.Rect(535, 520, 90, 40)
 
-    run_button = pygame.Rect(620, 520, 80, 40)
-    clear_button = pygame.Rect(710, 520, 80, 40)
+    amount_down_button = pygame.Rect(screen.get_width() - 145, 430, 45, 35)
+    amount_up_button = pygame.Rect(screen.get_width() - 90, 430, 45, 35)
+
+    run_button = pygame.Rect(635, 520, 70, 40)
+    clear_button = pygame.Rect(715, 520, 75, 40)
 
     # Main
     running = True
@@ -403,6 +577,7 @@ def run_puzzle_module(screen, clock):
 
         #back button
         draw_button(screen, "Back", back_button, button_font, LIGHT_GRAY)
+        draw_button(screen, "Help", help_button, button_font, LIGHT_GRAY)
 
         #title
         draw_text(
@@ -422,6 +597,26 @@ def run_puzzle_module(screen, clock):
             BLACK,
             215,
             75
+        )
+
+        draw_button(screen, "Coin DP", coin_button, button_font, YELLOW)
+
+        draw_text(
+            screen,
+            "Another DP example.",
+            small_font,
+            BLACK,
+            screen.get_width() - 165,
+            160
+        )
+
+        draw_text(
+            screen,
+            "Click to open it.",
+            small_font,
+            BLACK,
+            screen.get_width() - 165,
+            180
         )
 
         #current mode
@@ -482,6 +677,43 @@ def run_puzzle_module(screen, clock):
                 280
             )
 
+        elif mode == "Coin Change":
+            draw_text(
+                screen,
+                "Coin Change DP.",
+                small_font,
+                BLACK,
+                90,
+                190
+            )
+
+            draw_text(
+                screen,
+                "Amount = " + str(coin_amount),
+                small_font,
+                BLACK,
+                90,
+                220
+            )
+
+            draw_text(
+                screen,
+                "Coins = " + str(coins),
+                small_font,
+                BLACK,
+                90,
+                250
+            )
+
+            draw_text(
+                screen,
+                "Ways = " + str(coin_result),
+                small_font,
+                BLACK,
+                90,
+                280
+            )
+
         else:
             draw_text(
                 screen,
@@ -520,22 +752,33 @@ def run_puzzle_module(screen, clock):
             )
 
         #grid
-        draw_grid(
-            screen,
-            small_font,
-            rows,
-            cols,
-            grid_x,
-            grid_y,
-            cell_size,
-            mode,
-            start,
-            end,
-            obstacles,
-            visited_cells,
-            path_cells,
-            dp_table
-        )
+        if mode == "Coin Change":
+            draw_coin_change(
+                screen,
+                small_font,
+                coins,
+                coin_amount,
+                coin_table,
+                coin_highlight
+            )
+        else:
+            draw_grid(
+                screen,
+                small_font,
+                rows,
+                cols,
+                grid_x,
+                grid_y,
+                cell_size,
+                mode,
+                start,
+                end,
+                obstacles,
+                visited_cells,
+                path_cells,
+                dp_table,
+                highlight_cell
+            )
 
         #message
         draw_text(screen, message, small_font, BLACK, 225, 485)
@@ -544,9 +787,15 @@ def run_puzzle_module(screen, clock):
         draw_button(screen, "Pathfinding", pathfinding_button, button_font, LIGHT_BLUE)
         draw_button(screen, "DP", dp_button, button_font, LIGHT_GREEN)
 
-        draw_button(screen, "Start", start_button, button_font, LIGHT_GREEN)
-        draw_button(screen, "End", end_button, button_font, LIGHT_RED)
-        draw_button(screen, "Obstacle", obstacle_button, button_font, LIGHT_GRAY)
+        if mode != "Coin Change":
+            draw_button(screen, "Start", start_button, button_font, LIGHT_GREEN)
+            draw_button(screen, "End", end_button, button_font, LIGHT_RED)
+            draw_button(screen, "Obstacle", obstacle_button, button_font, LIGHT_GRAY)
+
+        if mode == "Coin Change":
+            draw_text(screen, "Change amount", small_font, BLACK, screen.get_width() - 150, 405)
+            draw_button(screen, "-", amount_down_button, button_font, LIGHT_RED)
+            draw_button(screen, "+", amount_up_button, button_font, LIGHT_GREEN)
 
         draw_button(screen, "Run", run_button, button_font, ORANGE)
         draw_button(screen, "Clear", clear_button, button_font, LIGHT_RED)
@@ -557,20 +806,43 @@ def run_puzzle_module(screen, clock):
         # Animat
         if is_animating:
             if current_time - last_step_time > step_delay:
-                # Show the next visited cell
-                if animation_index < len(visited_order):
-                    visited_cells.add(visited_order[animation_index])
-                    animation_index += 1
-                    last_step_time = current_time
+                if animation_type == "Pathfinding":
+                    # Show the next visited cell
+                    if animation_index < len(visited_order):
+                        visited_cells.add(visited_order[animation_index])
+                        animation_index += 1
+                        last_step_time = current_time
 
-                # Stop animation
-                else:
-                    is_animating = False
-
-                    if len(path_cells) > 0:
-                        message = "Shortest path found using Dijkstra."
+                    # Stop animation
                     else:
-                        message = "No path found."
+                        is_animating = False
+                        path_cells = final_path_cells
+
+                        if len(path_cells) > 0:
+                            message = "Shortest path found using Dijkstra."
+                        else:
+                            message = "No path found."
+
+                elif animation_type == "DP":
+                    if animation_index < len(dp_steps):
+                        dp_table, highlight_cell, message = dp_steps[animation_index]
+                        animation_index += 1
+                        last_step_time = current_time
+                    else:
+                        is_animating = False
+                        path_cells = final_path_cells
+                        highlight_cell = None
+                        message = "DP completed. Path count = " + str(path_count)
+
+                elif animation_type == "Coin Change":
+                    if animation_index < len(coin_steps):
+                        coin_table, coin_highlight, message = coin_steps[animation_index]
+                        animation_index += 1
+                        last_step_time = current_time
+                    else:
+                        is_animating = False
+                        coin_highlight = -1
+                        message = "Coin Change completed. Total ways = " + str(coin_result)
 
 
         for event in pygame.event.get():
@@ -587,6 +859,9 @@ def run_puzzle_module(screen, clock):
                 if back_button.collidepoint(mouse_pos):
                     running = False
 
+                elif help_button.collidepoint(mouse_pos):
+                    show_puzzle_help(screen, clock)
+
                 #Pathfinding mode
                 elif pathfinding_button.collidepoint(mouse_pos):
                     mode = "Pathfinding"
@@ -594,9 +869,13 @@ def run_puzzle_module(screen, clock):
                     visited_order = []
                     visited_cells = set()
                     path_cells = []
+                    final_path_cells = []
                     dp_table = None
                     path_count = 0
+                    dp_steps = []
+                    highlight_cell = None
                     is_animating = False
+                    animation_type = None
                     message = "Pathfinding mode selected."
 
                 #DP mode
@@ -615,31 +894,84 @@ def run_puzzle_module(screen, clock):
                     visited_order = []
                     visited_cells = set()
                     path_cells = []
+                    final_path_cells = []
                     dp_table = None
                     path_count = 0
+                    dp_steps = []
+                    highlight_cell = None
                     is_animating = False
+                    animation_type = None
                     message = "DP mode selected. Click cells to add obstacles."
 
+                elif coin_button.collidepoint(mouse_pos):
+                    mode = "Coin Change"
+                    tool = "None"
+                    visited_order = []
+                    visited_cells = set()
+                    path_cells = []
+                    final_path_cells = []
+                    dp_table = None
+                    path_count = 0
+                    dp_steps = []
+                    highlight_cell = None
+                    coin_steps = []
+                    coin_table = []
+                    for i in range(coin_amount + 1):
+                        coin_table.append(0)
+                    coin_result = 0
+                    coin_highlight = -1
+                    is_animating = False
+                    animation_type = None
+                    message = "Coin Change DP selected. Click Run."
+
                 #Start tool
-                elif start_button.collidepoint(mouse_pos):
+                elif start_button.collidepoint(mouse_pos) and mode != "Coin Change":
                     tool = "Start"
                     message = "Click a grid cell to place the start point."
 
                 #End tool
-                elif end_button.collidepoint(mouse_pos):
+                elif end_button.collidepoint(mouse_pos) and mode != "Coin Change":
                     tool = "End"
                     message = "Click a grid cell to place the end point."
 
                 # Obstacle tool
-                elif obstacle_button.collidepoint(mouse_pos):
+                elif obstacle_button.collidepoint(mouse_pos) and mode != "Coin Change":
                     tool = "Obstacle"
                     message = "Click grid cells to add or remove obstacles."
+
+                elif amount_down_button.collidepoint(mouse_pos) and mode == "Coin Change":
+                    if coin_amount > 1:
+                        coin_amount -= 1
+                        coin_table = []
+                        for i in range(coin_amount + 1):
+                            coin_table.append(0)
+
+                        coin_steps = []
+                        coin_result = 0
+                        coin_highlight = -1
+                        is_animating = False
+                        animation_type = None
+                        message = "Coin amount decreased."
+
+                elif amount_up_button.collidepoint(mouse_pos) and mode == "Coin Change":
+                    if coin_amount < 15:
+                        coin_amount += 1
+                        coin_table = []
+                        for i in range(coin_amount + 1):
+                            coin_table.append(0)
+
+                        coin_steps = []
+                        coin_result = 0
+                        coin_highlight = -1
+                        is_animating = False
+                        animation_type = None
+                        message = "Coin amount increased."
 
                 # Run
                 elif run_button.collidepoint(mouse_pos):
 
                     if mode == "Pathfinding":
-                        visited_order, path_cells = dijkstra_pathfinding(
+                        visited_order, final_path_cells = dijkstra_pathfinding(
                             rows,
                             cols,
                             start,
@@ -649,15 +981,18 @@ def run_puzzle_module(screen, clock):
 
                         # Reset animation variables
                         visited_cells = set()
+                        path_cells = []
                         animation_index = 0
                         is_animating = True
+                        animation_type = "Pathfinding"
                         last_step_time = pygame.time.get_ticks()
                         dp_table = None
+                        highlight_cell = None
                         message = "Running Dijkstra pathfinding..."
 
                     # Run Dynamic Programming
-                    else:
-                        dp_table, path_count, path_cells = dynamic_programming_grid(
+                    elif mode == "DP":
+                        dp_steps, dp_table, path_count, final_path_cells = dynamic_programming_grid_steps(
                             rows,
                             cols,
                             obstacles
@@ -665,8 +1000,24 @@ def run_puzzle_module(screen, clock):
 
                         visited_cells = set()
                         visited_order = []
-                        is_animating = False
-                        message = "DP completed. Path count = " + str(path_count)
+                        path_cells = []
+                        animation_index = 0
+                        is_animating = True
+                        animation_type = "DP"
+                        last_step_time = pygame.time.get_ticks()
+                        message = "Running DP grid path counting..."
+
+                    else:
+                        coin_steps, coin_result = coin_change_dp_steps(coins, coin_amount)
+                        coin_table = []
+                        for i in range(coin_amount + 1):
+                            coin_table.append(0)
+                        coin_highlight = -1
+                        animation_index = 0
+                        is_animating = True
+                        animation_type = "Coin Change"
+                        last_step_time = pygame.time.get_ticks()
+                        message = "Running Coin Change DP..."
 
                 # Clear the grid
                 elif clear_button.collidepoint(mouse_pos):
@@ -674,71 +1025,86 @@ def run_puzzle_module(screen, clock):
                     visited_order = []
                     visited_cells = set()
                     path_cells = []
+                    final_path_cells = []
                     dp_table = None
                     path_count = 0
+                    dp_steps = []
+                    highlight_cell = None
+                    coin_steps = []
+                    coin_table = []
+                    for i in range(coin_amount + 1):
+                        coin_table.append(0)
+                    coin_result = 0
+                    coin_highlight = -1
                     is_animating = False
+                    animation_type = None
                     start = (0, 0)
                     end = (rows - 1, cols - 1)
                     message = "Grid cleared."
 
                 #grid cell click
                 else:
-                    clicked_cell = get_cell_from_mouse(
-                        mouse_pos,
-                        grid_x,
-                        grid_y,
-                        cell_size,
-                        rows,
-                        cols
-                    )
+                    if mode != "Coin Change":
+                        clicked_cell = get_cell_from_mouse(
+                            mouse_pos,
+                            grid_x,
+                            grid_y,
+                            cell_size,
+                            rows,
+                            cols
+                        )
 
 
-                    if clicked_cell is not None:
-                        # Clear previous results whenever the grid changes
-                        visited_order = []
-                        visited_cells = set()
-                        path_cells = []
-                        dp_table = None
-                        path_count = 0
-                        is_animating = False
+                        if clicked_cell is not None:
+                            # Clear previous results whenever the grid changes
+                            visited_order = []
+                            visited_cells = set()
+                            path_cells = []
+                            final_path_cells = []
+                            dp_table = None
+                            path_count = 0
+                            dp_steps = []
+                            highlight_cell = None
+                            is_animating = False
+                            animation_type = None
 
-                        #dp model
-                        if mode == "DP":
-                            if clicked_cell != (0, 0) and clicked_cell != (rows - 1, cols - 1):
-
-                                if clicked_cell in obstacles:
-                                    obstacles.remove(clicked_cell)
-                                else:
-                                    obstacles.add(clicked_cell)
-
-                                message = "Obstacle updated for DP puzzle."
-
-                        # In Pathfinding mode, start, end and obstacles can be changed
-                        else:
-                            if tool == "Start":
-
-                                if clicked_cell != end and clicked_cell not in obstacles:
-                                    start = clicked_cell
-                                    message = "Start point updated."
-
-                            elif tool == "End":
-
-                                if clicked_cell != start and clicked_cell not in obstacles:
-                                    end = clicked_cell
-                                    message = "End point updated."
-
-                            elif tool == "Obstacle":
-                                # Obstacles cannot be placed on the start or end cell( bug fixing)
-                                if clicked_cell != start and clicked_cell != end:
+                            #dp model
+                            if mode == "DP":
+                                if clicked_cell != (0, 0) and clicked_cell != (rows - 1, cols - 1):
 
                                     if clicked_cell in obstacles:
                                         obstacles.remove(clicked_cell)
                                     else:
                                         obstacles.add(clicked_cell)
 
-                                    message = "Obstacle updated."
+                                    message = "Obstacle updated for DP puzzle."
 
-       #start
+                            # In Pathfinding mode, start, end and obstacles can be changed
+                            else:
+                                if tool == "Start":
+
+                                    if clicked_cell != end and clicked_cell not in obstacles:
+                                        start = clicked_cell
+                                        message = "Start point updated."
+
+                                elif tool == "End":
+
+                                    if clicked_cell != start and clicked_cell not in obstacles:
+                                        end = clicked_cell
+                                        message = "End point updated."
+
+                                elif tool == "Obstacle":
+                                    # Obstacles cannot be placed on the start or end cell( bug fixing)
+                                    if clicked_cell != start and clicked_cell != end:
+
+                                        if clicked_cell in obstacles:
+                                            obstacles.remove(clicked_cell)
+                                        else:
+                                            obstacles.add(clicked_cell)
+
+                                        message = "Obstacle updated."
+
+
         pygame.display.update()
 
 

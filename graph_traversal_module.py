@@ -32,10 +32,7 @@ def draw_button(screen, text, rect, font, colour):
 
 
 def bfs(graph, start):
-    """
-    Breadth First Search.
-    Visits neighbours level by level.
-    """
+
     # visited list save the order
     visited = []
 
@@ -62,10 +59,9 @@ def bfs(graph, start):
 
 
 def dfs(graph, start):
-    """
-    Depth First Search.
-    Goes as deep as possible before backtracking.
-    """
+
+    #Depth First Search.
+
     # visited list save the order
     visited = []
 
@@ -92,9 +88,9 @@ def dfs(graph, start):
 
 
 def draw_graph(screen, font, positions, edges, selected_node, visited_nodes, current_node):
-    """
-    Draw graph nodes and edges.
-    """
+
+    #Draw graph nodes and edges.
+
     # draw edges first, so lines not cover node text
     for node in edges:
         for neighbour in edges[node]:
@@ -127,9 +123,9 @@ def draw_graph(screen, font, positions, edges, selected_node, visited_nodes, cur
 
 
 def get_clicked_node(mouse_pos, positions):
-    """
-    Check whether the user clicked a graph node.
-    """
+
+    #Check whether the user clicked a graph node.
+
     mouse_x, mouse_y = mouse_pos
 
     # check mouse distance to every node
@@ -147,11 +143,11 @@ def get_clicked_node(mouse_pos, positions):
     return None
 
 
-def run_graph_module(screen, clock):
-    """
-    Main function for Graph Algorithms module.
-    This module visualises BFS and DFS traversal.
-    """
+def run_graph_traversal_module(screen, clock):
+
+    #Main function for Graph Algorithms module.
+    #This module visualises BFS and DFS traversal.
+
     # fonts
     title_font = pygame.font.SysFont(None, 42)
     button_font = pygame.font.SysFont(None, 24)
@@ -360,8 +356,8 @@ def run_graph_module(screen, clock):
                         step_index = 0
                         message = "Start node changed to " + selected_node
 
-        # update screen
+
         pygame.display.update()
 
-        # limit FPS
+
         clock.tick(60)

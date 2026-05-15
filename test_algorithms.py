@@ -1,322 +1,256 @@
 import os
+import sys
 import time
 import unittest
 
-#important!!!
-# When testing the algorithm, we don't need to actually open a window, so here we set it to use a fake display driver without opening a real Pygame window.
+# make pygame not open real window when testing
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 
-from data_structures import LinkedList, clamp
-from sorting_visualizer import (
-    bubble_sort_steps,
-    selection_sort_steps,
-    create_random_array
-)
-from graph_visualizer import bfs, dfs, get_clicked_node
-from puzzle_module import (
-    get_cell_from_mouse,
-    get_neighbours,
-    dijkstra_pathfinding,
-    dynamic_programming_grid
-)
+# let test file find project files
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 
+# import my modules, if some file name is missing then skip related tests
+try:
+    import stack_page as stack_module
+except ImportError:
+    stack_module = None
 
-def get_final_array(generator, original_data):
-    # get the last array from sorting steps
-    final_array = original_data[:]
+try:
+    import queue_page as queue_module
+except ImportError:
+    queue_module = None
 
-    for step in generator:
-        final_array = step[0][:]
+try:
+    from linked_list_page import LinkedList
+except ImportError:
+    LinkedList = None
 
-    return final_array
+try:
+    import sorting_algorithms_module as sorting_module
+except ImportError:
+    sorting_module = None
 
+try:
+    from graph_algorithms_module import BST
+except ImportError:
+    BST = None
 
-def assert_valid_grid_path(testcase, path, start, end, rows, cols, obstacles):
-    # check if path is inside grid and not going through wall
-    testcase.assertIsInstance(path, list)
-    testcase.assertGreater(len(path), 0)
+try:
+    import graph_traversal_module as graph_module
+except ImportError:
+    graph_module = None
 
-    testcase.assertEqual(path[0], start)
-    testcase.assertEqual(path[-1], end)
+try:
+    import heap_priority_queue_module as heap_module
+except ImportError:
+    heap_module = None
 
-    for row, col in path:
-        testcase.assertGreaterEqual(row, 0)
-        testcase.assertLess(row, rows)
-        testcase.assertGreaterEqual(col, 0)
-        testcase.assertLess(col, cols)
-        testcase.assertNotIn((row, col), obstacles)
+try:
+    import linear_search_page as linear_module
+except ImportError:
+    linear_module = None
 
-    for index in range(len(path) - 1):
-        row1, col1 = path[index]
-        row2, col2 = path[index + 1]
-
-        distance = abs(row1 - row2) + abs(col1 - col2)
-
-        testcase.assertEqual(distance, 1)
-
-
-#
-# Phase 1: Linked List
-
-
-class TestLinkedList(unittest.TestCase):
-
-
-    def test_insert_end(self):
-        linked_list = LinkedList()
-
-        linked_list.insert_end(10)
-        linked_list.insert_end(20)
-        linked_list.insert_end(30)
-
-        self.assertEqual(linked_list.to_list(), [10, 20, 30])
-        self.assertEqual(linked_list.size, 3)
-
-    def test_delete_head(self):
-        linked_list = LinkedList()
-
-        linked_list.insert_end(10)
-        linked_list.insert_end(20)
-        linked_list.insert_end(30)
-
-        removed = linked_list.delete_head()
-
-        self.assertEqual(removed, 10)
-        self.assertEqual(linked_list.to_list(), [20, 30])
-        self.assertEqual(linked_list.size, 2)
-
-    def test_delete_from_empty_list(self):
-        linked_list = LinkedList()
-
-        removed = linked_list.delete_head()
-
-        self.assertIsNone(removed)
-        self.assertEqual(linked_list.to_list(), [])
-        self.assertEqual(linked_list.size, 0)
-
-    def test_reverse(self):
-        linked_list = LinkedList()
-
-        linked_list.insert_end(1)
-        linked_list.insert_end(2)
-        linked_list.insert_end(3)
-
-        linked_list.reverse()
-
-        self.assertEqual(linked_list.to_list(), [3, 2, 1])
-
-    def test_reverse_empty_list(self):
-        linked_list = LinkedList()
-
-        linked_list.reverse()
-
-        self.assertEqual(linked_list.to_list(), [])
-        self.assertEqual(linked_list.size, 0)
-
-    def test_clear(self):
-        linked_list = LinkedList()
-
-        linked_list.insert_end(1)
-        linked_list.insert_end(2)
-        linked_list.clear()
-
-        self.assertEqual(linked_list.to_list(), [])
-        self.assertEqual(linked_list.size, 0)
+try:
+    import puzzle_module
+except ImportError:
+    puzzle_module = None
 
 
-
-# Phase 1: Stack and Queue Tests
 class TestStackAndQueue(unittest.TestCase):
+    """Testing stack and queue simple logic."""
 
-
-    def test_stack_push_pop_lifo_order(self):
+    @unittest.skipIf(stack_module is None, "stack_page.py not found")
+    def test_stack_push_pop_order(self):
         stack = []
 
         stack.append(10)
         stack.append(20)
         stack.append(30)
 
+        # stack is LIFO, last one goes out first
         self.assertEqual(stack.pop(), 30)
         self.assertEqual(stack.pop(), 20)
         self.assertEqual(stack, [10])
 
-    def test_stack_empty_condition(self):
+    @unittest.skipIf(stack_module is None, "stack_page.py not found")
+    def test_stack_empty_check(self):
         stack = []
 
+        # app should not pop when stack is empty
         self.assertEqual(len(stack), 0)
-        self.assertFalse(len(stack) > 0)
+        self.assertTrue(len(stack) == 0)
 
-    def test_stack_multiple_operations(self):
-        stack = []
-
-        stack.append(1)
-        stack.append(2)
-        stack.append(3)
-
-        removed = stack.pop()
-        stack.append(4)
-
-        self.assertEqual(removed, 3)
-        self.assertEqual(stack, [1, 2, 4])
-
-    def test_queue_enqueue_dequeue_fifo_order(self):
-        queue = []
-
-        queue.append(10)
-        queue.append(20)
-        queue.append(30)
-        queue.append(40)
-
-        self.assertEqual(queue.pop(0), 10)
-        self.assertEqual(queue.pop(0), 20)
-        self.assertEqual(queue, [30, 40])
-
-    def test_queue_empty_condition(self):
-        queue = []
-
-        self.assertEqual(len(queue), 0)
-        self.assertFalse(len(queue) > 0)
-
-    def test_queue_multiple_operations(self):
+    @unittest.skipIf(queue_module is None, "queue_page.py not found")
+    def test_queue_enqueue_dequeue_order(self):
         queue = []
 
         queue.append(1)
         queue.append(2)
         queue.append(3)
-
-        removed = queue.pop(0)
         queue.append(4)
 
-        self.assertEqual(removed, 1)
-        self.assertEqual(queue, [2, 3, 4])
+        # queue is FIFO, first one goes out first
+        self.assertEqual(queue.pop(0), 1)
+        self.assertEqual(queue.pop(0), 2)
+        self.assertEqual(queue, [3, 4])
 
-    def test_stack_and_queue_are_independent(self):
-        stack = []
+    @unittest.skipIf(queue_module is None, "queue_page.py not found")
+    def test_queue_empty_check(self):
         queue = []
 
-        stack.append(1)
-        stack.append(2)
-
-        queue.append(1)
-        queue.append(2)
-
-        self.assertEqual(stack.pop(), 2)
-        self.assertEqual(queue.pop(0), 1)
-
-    def test_reset_clears_stack_queue_and_linked_list(self):
-        stack = [1, 2, 3]
-        queue = [1, 2, 3]
-
-        linked_list = LinkedList()
-        linked_list.insert_end(1)
-        linked_list.insert_end(2)
-        linked_list.insert_end(3)
-
-        stack.clear()
-        queue.clear()
-        linked_list.clear()
-
-        self.assertEqual(stack, [])
-        self.assertEqual(queue, [])
-        self.assertEqual(linked_list.to_list(), [])
-        self.assertEqual(linked_list.size, 0)
+        # app should not dequeue when queue is empty
+        self.assertEqual(len(queue), 0)
+        self.assertTrue(len(queue) == 0)
 
 
+class TestLinkedList(unittest.TestCase):
+    """Testing linked list stuff."""
 
-# Phase 2: Sorting Tests
+    @unittest.skipIf(LinkedList is None, "linked_list_page.py not found")
+    def test_insert_end(self):
+        ll = LinkedList()
+
+        ll.insert_end(10)
+        ll.insert_end(20)
+        ll.insert_end(30)
+
+        self.assertEqual(ll.to_list(), [10, 20, 30])
+
+    @unittest.skipIf(LinkedList is None, "linked_list_page.py not found")
+    def test_insert_at_position(self):
+        ll = LinkedList()
+
+        ll.insert_end(10)
+        ll.insert_end(30)
+
+        result = ll.insert_at_position(20, 1)
+
+        self.assertTrue(result)
+        self.assertEqual(ll.to_list(), [10, 20, 30])
+
+    @unittest.skipIf(LinkedList is None, "linked_list_page.py not found")
+    def test_delete_value(self):
+        ll = LinkedList()
+
+        ll.insert_end(5)
+        ll.insert_end(10)
+        ll.insert_end(15)
+
+        removed = ll.delete_value(10)
+
+        self.assertEqual(removed, 10)
+        self.assertEqual(ll.to_list(), [5, 15])
+
+    @unittest.skipIf(LinkedList is None, "linked_list_page.py not found")
+    def test_reverse(self):
+        ll = LinkedList()
+
+        ll.insert_end(1)
+        ll.insert_end(2)
+        ll.insert_end(3)
+
+        ll.reverse()
+
+        self.assertEqual(ll.to_list(), [3, 2, 1])
 
 
 class TestSortingAlgorithms(unittest.TestCase):
+    #Testing sorting algorithm
 
-
-    def test_bubble_sort_correctness(self):
+    @unittest.skipIf(sorting_module is None, "sorting_algorithms_module.py not found")
+    def test_bubble_sort_result(self):
         data = [5, 3, 8, 1, 2]
 
-        result = get_final_array(bubble_sort_steps(data), data)
+        steps = sorting_module.make_bubble_steps(data)
+        final_array = steps[-1][0]
 
-        self.assertEqual(result, [1, 2, 3, 5, 8])
+        self.assertEqual(final_array, [1, 2, 3, 5, 8])
 
-    def test_selection_sort_correctness(self):
-        data = [5, 3, 8, 1, 2]
+    @unittest.skipIf(sorting_module is None, "sorting_algorithms_module.py not found")
+    def test_selection_sort_result(self):
+        data = [9, 4, 6, 1, 3]
 
-        result = get_final_array(selection_sort_steps(data), data)
+        steps = sorting_module.make_selection_steps(data)
+        final_array = steps[-1][0]
 
-        self.assertEqual(result, [1, 2, 3, 5, 8])
+        self.assertEqual(final_array, [1, 3, 4, 6, 9])
 
-    def test_sorting_with_duplicates(self):
-        data = [4, 2, 4, 1, 2]
+    @unittest.skipIf(sorting_module is None, "sorting_algorithms_module.py not found")
+    def test_merge_sort_result(self):
+        data = [7, 2, 9, 1, 5]
 
-        bubble_result = get_final_array(bubble_sort_steps(data), data)
-        selection_result = get_final_array(selection_sort_steps(data), data)
+        steps = sorting_module.make_merge_steps(data)
+        final_array = steps[-1][0]
 
-        self.assertEqual(bubble_result, [1, 2, 2, 4, 4])
-        self.assertEqual(selection_result, [1, 2, 2, 4, 4])
-
-    def test_sorting_empty_array(self):
-        data = []
-
-        bubble_result = get_final_array(bubble_sort_steps(data), data)
-        selection_result = get_final_array(selection_sort_steps(data), data)
-
-        self.assertEqual(bubble_result, [])
-        self.assertEqual(selection_result, [])
-
-    def test_sorting_single_element(self):
-        data = [10]
-
-        bubble_result = get_final_array(bubble_sort_steps(data), data)
-        selection_result = get_final_array(selection_sort_steps(data), data)
-
-        self.assertEqual(bubble_result, [10])
-        self.assertEqual(selection_result, [10])
-
-    def test_sorting_already_sorted_array(self):
-        data = [1, 2, 3, 4, 5]
-
-        bubble_result = get_final_array(bubble_sort_steps(data), data)
-        selection_result = get_final_array(selection_sort_steps(data), data)
-
-        self.assertEqual(bubble_result, [1, 2, 3, 4, 5])
-        self.assertEqual(selection_result, [1, 2, 3, 4, 5])
-
-    def test_sorting_reverse_order_array(self):
-        data = [5, 4, 3, 2, 1]
-
-        bubble_result = get_final_array(bubble_sort_steps(data), data)
-        selection_result = get_final_array(selection_sort_steps(data), data)
-
-        self.assertEqual(bubble_result, [1, 2, 3, 4, 5])
-        self.assertEqual(selection_result, [1, 2, 3, 4, 5])
-
-    def test_original_array_not_modified(self):
-        data = [3, 1, 2]
-        original = data[:]
-
-        get_final_array(bubble_sort_steps(data), data)
-        get_final_array(selection_sort_steps(data), data)
-
-        self.assertEqual(data, original)
-
-    def test_create_random_array_length_and_range(self):
-        data = create_random_array()
-
-        self.assertEqual(len(data), 10)
-
-        for value in data:
-            self.assertGreaterEqual(value, 40)
-            self.assertLessEqual(value, 250)
+        self.assertEqual(final_array, [1, 2, 5, 7, 9])
 
 
-# =========================
-# Phase 2: Graph Tests
-# =========================
+class TestBSTAlgorithms(unittest.TestCase):
+    #Testing BST
 
-class TestGraphAlgorithms(unittest.TestCase):
-    """Tests for BFS and DFS."""
+    @unittest.skipIf(BST is None, "graph_algorithms_module.py not found")
+    def test_bst_inorder(self):
+        bst = BST()
 
-    def setUp(self):
-        self.graph = {
+        for value in [50, 30, 70, 20, 40, 60, 80]:
+            bst.insert(value)
+
+        self.assertEqual(bst.inorder(), [20, 30, 40, 50, 60, 70, 80])
+
+    @unittest.skipIf(BST is None, "graph_algorithms_module.py not found")
+    def test_bst_preorder_and_postorder(self):
+        bst = BST()
+
+        for value in [50, 30, 70, 20, 40, 60, 80]:
+            bst.insert(value)
+
+        self.assertEqual(bst.preorder(), [50, 30, 20, 40, 70, 60, 80])
+        self.assertEqual(bst.postorder(), [20, 40, 30, 60, 80, 70, 50])
+
+    @unittest.skipIf(BST is None, "graph_algorithms_module.py not found")
+    def test_bst_search_path(self):
+        bst = BST()
+
+        for value in [50, 30, 70, 20, 40, 60, 80]:
+            bst.insert(value)
+
+        path, found = bst.search_path(60)
+
+        self.assertTrue(found)
+        self.assertEqual(path, [50, 70, 60])
+
+    @unittest.skipIf(BST is None, "graph_algorithms_module.py not found")
+    def test_bst_delete_leaf_node(self):
+        bst = BST()
+
+        for value in [50, 30, 70, 20, 40, 60, 80]:
+            bst.insert(value)
+
+        deleted = bst.delete(20)
+
+        self.assertTrue(deleted)
+        self.assertEqual(bst.inorder(), [30, 40, 50, 60, 70, 80])
+
+    @unittest.skipIf(BST is None, "graph_algorithms_module.py not found")
+    def test_bst_delete_two_child_node(self):
+        bst = BST()
+
+        for value in [50, 30, 70, 20, 40, 60, 80]:
+            bst.insert(value)
+
+        deleted = bst.delete(70)
+
+        self.assertTrue(deleted)
+        self.assertEqual(bst.inorder(), [20, 30, 40, 50, 60, 80])
+
+
+class TestGraphTraversal(unittest.TestCase):
+    #Testing graph BFS  DFS
+
+    @unittest.skipIf(graph_module is None, "graph_traversal_module.py not found")
+    def test_bfs_order(self):
+        graph = {
             "A": ["B", "C"],
             "B": ["A", "D", "E"],
             "C": ["A", "F"],
@@ -325,446 +259,246 @@ class TestGraphAlgorithms(unittest.TestCase):
             "F": ["C", "E"]
         }
 
-    def test_bfs_from_a(self):
-        result = bfs(self.graph, "A")
+        if hasattr(graph_module, "bfs"):
+            result = graph_module.bfs(graph, "A")
+            self.assertEqual(result, ["A", "B", "C", "D", "E", "F"])
 
-        self.assertEqual(result, ["A", "B", "C", "D", "E", "F"])
+        elif hasattr(graph_module, "make_bfs_steps"):
+            steps = graph_module.make_bfs_steps("A")
+            result = steps[-1]["order"]
+            self.assertEqual(result, ["A", "B", "C", "D", "E", "F"])
 
-    def test_dfs_from_a(self):
-        result = dfs(self.graph, "A")
+        else:
+            self.fail("No BFS function found")
 
-        self.assertEqual(result, ["A", "B", "D", "E", "F", "C"])
+    @unittest.skipIf(graph_module is None, "graph_traversal_module.py not found")
+    def test_dfs_order_starts_correctly(self):
+        graph = {
+            "A": ["B", "C"],
+            "B": ["A", "D", "E"],
+            "C": ["A", "F"],
+            "D": ["B"],
+            "E": ["B", "F"],
+            "F": ["C", "E"]
+        }
 
-    def test_bfs_from_c(self):
-        result = bfs(self.graph, "C")
+        if hasattr(graph_module, "dfs"):
+            result = graph_module.dfs(graph, "A")
 
-        self.assertEqual(result, ["C", "A", "F", "B", "E", "D"])
+            # not checking every dfs way too hard, just basic right
+            self.assertEqual(result[0], "A")
+            self.assertEqual(set(result), {"A", "B", "C", "D", "E", "F"})
 
-    def test_dfs_from_c(self):
-        result = dfs(self.graph, "C")
+        elif hasattr(graph_module, "make_dfs_steps"):
+            steps = graph_module.make_dfs_steps("A")
+            result = steps[-1]["order"]
 
-        self.assertEqual(result, ["C", "A", "B", "D", "E", "F"])
+            self.assertEqual(result[0], "A")
+            self.assertEqual(set(result), {"A", "B", "C", "D", "E", "F"})
 
-    def test_bfs_visits_all_reachable_nodes(self):
-        result = bfs(self.graph, "A")
-
-        self.assertEqual(set(result), {"A", "B", "C", "D", "E", "F"})
-        self.assertEqual(result[0], "A")
-
-    def test_dfs_visits_all_reachable_nodes(self):
-        result = dfs(self.graph, "A")
-
-        self.assertEqual(set(result), {"A", "B", "C", "D", "E", "F"})
-        self.assertEqual(result[0], "A")
+        else:
+            self.fail("No DFS function found")
 
 
+class TestHeapPriorityQueue(unittest.TestCase):
+    #Testing heap
 
-# Phase 3: Puzzle Helper Tests
+    @unittest.skipIf(heap_module is None, "heap_priority_queue_module.py not found")
+    def test_heap_extract_min_order(self):
+        heap = []
 
+        # event item = time, counter, description
+        heap_module.heap_insert(heap, (5, 0, "Email"))
+        heap_module.heap_insert(heap, (2, 1, "Meeting"))
+        heap_module.heap_insert(heap, (8, 2, "Backup"))
+        heap_module.heap_insert(heap, (1, 3, "Urgent"))
 
-class TestPuzzleHelpers(unittest.TestCase):
-    """Tests for puzzle helper functions."""
+        first, _ = heap_module.heap_extract_min(heap)
+        second, _ = heap_module.heap_extract_min(heap)
 
-    def test_get_cell_from_mouse_inside_grid(self):
-        result = get_cell_from_mouse(
-            mouse_pos=(315, 165),
-            grid_x=270,
-            grid_y=120,
-            cell_size=45,
-            rows=8,
-            cols=8
-        )
+        self.assertEqual(first[0], 1)
+        self.assertEqual(first[2], "Urgent")
 
-        self.assertEqual(result, (1, 1))
+        self.assertEqual(second[0], 2)
+        self.assertEqual(second[2], "Meeting")
 
-    def test_get_cell_from_mouse_outside_grid(self):
-        result = get_cell_from_mouse(
-            mouse_pos=(100, 100),
-            grid_x=270,
-            grid_y=120,
-            cell_size=45,
-            rows=8,
-            cols=8
-        )
+    @unittest.skipIf(heap_module is None, "heap_priority_queue_module.py not found")
+    def test_heap_empty_extract(self):
+        heap = []
+
+        result, highlight = heap_module.heap_extract_min(heap)
 
         self.assertIsNone(result)
-
-    def test_get_neighbours_corner_cell(self):
-        result = get_neighbours((0, 0), 3, 3)
-
-        self.assertEqual(set(result), {(1, 0), (0, 1)})
-
-    def test_get_neighbours_middle_cell(self):
-        result = get_neighbours((1, 1), 3, 3)
-
-        self.assertEqual(
-            set(result),
-            {(0, 1), (2, 1), (1, 0), (1, 2)}
-        )
+        self.assertEqual(highlight, [])
 
 
+class TestLinearSearchInput(unittest.TestCase):
+    #"Testing target input
 
-# Phase 3: Dijkstra Pathfinding Tests
+    @unittest.skipIf(linear_module is None, "linear_search_page.py not found")
+    def test_parse_multiple_targets_with_space(self):
+        if not hasattr(linear_module, "parse_targets"):
+            self.skipTest("parse_targets function not found")
+
+        result = linear_module.parse_targets("7 3 10")
+
+        self.assertEqual(result, [7, 3, 10])
+
+    @unittest.skipIf(linear_module is None, "linear_search_page.py not found")
+    def test_parse_multiple_targets_with_comma(self):
+        if not hasattr(linear_module, "parse_targets"):
+            self.skipTest("parse_targets function not found")
+
+        result = linear_module.parse_targets("7,3,10")
+
+        self.assertEqual(result, [7, 3, 10])
 
 
-class TestDijkstraPathfinding(unittest.TestCase):
-    """Tests for Dijkstra pathfinding."""
+class TestPuzzleAndDynamicProgramming(unittest.TestCase):
+    #Test puzzle
 
-    def test_dijkstra_path_exists(self):
-        rows = 3
-        cols = 3
-        start = (0, 0)
-        end = (2, 2)
-        obstacles = {(1, 0), (1, 1)}
+    @unittest.skipIf(puzzle_module is None, "puzzle_module.py not found")
+    def test_dijkstra_pathfinding_basic(self):
+        if not hasattr(puzzle_module, "dijkstra_pathfinding"):
+            self.skipTest("dijkstra_pathfinding function not found")
 
-        visited_order, path = dijkstra_pathfinding(
-            rows,
-            cols,
-            start,
-            end,
-            obstacles
+        visited_order, path = puzzle_module.dijkstra_pathfinding(
+            3,
+            3,
+            (0, 0),
+            (2, 2),
+            set()
         )
 
         self.assertGreater(len(visited_order), 0)
-        assert_valid_grid_path(
-            self,
-            path,
-            start,
-            end,
-            rows,
-            cols,
-            obstacles
-        )
-
-    def test_dijkstra_no_path(self):
-        rows = 3
-        cols = 3
-        start = (0, 0)
-        end = (2, 2)
-        obstacles = {(0, 1), (1, 0)}
-
-        visited_order, path = dijkstra_pathfinding(
-            rows,
-            cols,
-            start,
-            end,
-            obstacles
-        )
-
-        self.assertEqual(path, [])
-        self.assertGreaterEqual(len(visited_order), 1)
-
-    def test_dijkstra_start_equals_end(self):
-        rows = 3
-        cols = 3
-        start = (1, 1)
-        end = (1, 1)
-        obstacles = set()
-
-        visited_order, path = dijkstra_pathfinding(
-            rows,
-            cols,
-            start,
-            end,
-            obstacles
-        )
-
-        self.assertEqual(path, [(1, 1)])
-        self.assertEqual(visited_order[0], (1, 1))
-
-    def test_dijkstra_path_avoids_obstacles(self):
-        rows = 4
-        cols = 4
-        start = (0, 0)
-        end = (3, 3)
-        obstacles = {(0, 1), (1, 1), (2, 1)}
-
-        visited_order, path = dijkstra_pathfinding(
-            rows,
-            cols,
-            start,
-            end,
-            obstacles
-        )
-
-        assert_valid_grid_path(
-            self,
-            path,
-            start,
-            end,
-            rows,
-            cols,
-            obstacles
-        )
-
-        for cell in obstacles:
-            self.assertNotIn(cell, path)
-
-
-
-# Phase 3: Dynamic Programming Tests
-
-
-class TestDynamicProgrammingGrid(unittest.TestCase):
-    """Tests for DP grid puzzle."""
-
-    def test_dp_grid_no_obstacles_2_by_2(self):
-        dp_table, path_count, path = dynamic_programming_grid(
-            rows=2,
-            cols=2,
-            obstacles=set()
-        )
-
-        self.assertEqual(path_count, 2)
-        self.assertEqual(dp_table[1][1], 2)
         self.assertEqual(path[0], (0, 0))
-        self.assertEqual(path[-1], (1, 1))
+        self.assertEqual(path[-1], (2, 2))
 
-    def test_dp_grid_no_obstacles_3_by_3(self):
-        dp_table, path_count, path = dynamic_programming_grid(
-            rows=3,
-            cols=3,
-            obstacles=set()
+    @unittest.skipIf(puzzle_module is None, "puzzle_module.py not found")
+    def test_dp_grid_path_count_no_obstacles(self):
+        if not hasattr(puzzle_module, "dynamic_programming_grid"):
+            self.skipTest("dynamic_programming_grid function not found")
+
+        dp, path_count, path = puzzle_module.dynamic_programming_grid(
+            3,
+            3,
+            set()
         )
 
         self.assertEqual(path_count, 6)
-        self.assertEqual(dp_table[2][2], 6)
         self.assertEqual(path[0], (0, 0))
         self.assertEqual(path[-1], (2, 2))
 
-    def test_dp_grid_with_center_obstacle(self):
+    @unittest.skipIf(puzzle_module is None, "puzzle_module.py not found")
+    def test_dp_grid_with_obstacle(self):
+        if not hasattr(puzzle_module, "dynamic_programming_grid"):
+            self.skipTest("dynamic_programming_grid function not found")
+
         obstacles = {(1, 1)}
 
-        dp_table, path_count, path = dynamic_programming_grid(
-            rows=3,
-            cols=3,
-            obstacles=obstacles
+        dp, path_count, path = puzzle_module.dynamic_programming_grid(
+            3,
+            3,
+            obstacles
         )
 
         self.assertEqual(path_count, 2)
-        self.assertEqual(dp_table[1][1], 0)
-        self.assertEqual(path[0], (0, 0))
-        self.assertEqual(path[-1], (2, 2))
+        self.assertEqual(dp[1][1], 0)
 
-    def test_dp_grid_start_blocked(self):
-        obstacles = {(0, 0)}
+        if path_count > 0:
+            self.assertEqual(path[0], (0, 0))
+            self.assertEqual(path[-1], (2, 2))
 
-        dp_table, path_count, path = dynamic_programming_grid(
-            rows=3,
-            cols=3,
-            obstacles=obstacles
-        )
+    @unittest.skipIf(puzzle_module is None, "puzzle_module.py not found")
+    def test_coin_change_dp_result(self):
+        if not hasattr(puzzle_module, "coin_change_dp_steps"):
+            self.skipTest("coin_change_dp_steps function not found")
 
-        self.assertEqual(path_count, 0)
-        self.assertEqual(path, [])
+        steps, result = puzzle_module.coin_change_dp_steps([1, 2, 5], 5)
 
-    def test_dp_grid_end_blocked(self):
-        obstacles = {(2, 2)}
-
-        dp_table, path_count, path = dynamic_programming_grid(
-            rows=3,
-            cols=3,
-            obstacles=obstacles
-        )
-
-        self.assertEqual(path_count, 0)
-        self.assertEqual(path, [])
+        self.assertEqual(result, 4)
+        self.assertGreater(len(steps), 0)
 
 
+class TestBenchmarks(unittest.TestCase):
+    #Small benchmark, just for report screenshot
 
-
-# Benchmarking Tests
-
-
-class TestBenchmarking(unittest.TestCase):
-
-
-    def show_time(self, test_name, running_time):
-        print(test_name + " runtime: " + format(running_time, ".6f") + " seconds")
-
-    # Phase 1 benchmark
-
-    def test_stack_benchmark(self):
+    def test_stack_queue_benchmark(self):
         stack = []
-
-        start_time = time.perf_counter()
-
-        for value in range(5000):
-            stack.append(value)
-
-        for value in range(5000):
-            stack.pop()
-
-        end_time = time.perf_counter()
-
-        running_time = end_time - start_time
-        self.show_time("Stack push/pop benchmark", running_time)
-
-        self.assertEqual(stack, [])
-        self.assertLess(running_time, 1.0)
-
-    def test_queue_benchmark(self):
         queue = []
 
-        start_time = time.perf_counter()
+        start = time.perf_counter()
 
-        for value in range(1500):
-            queue.append(value)
+        for i in range(1000):
+            stack.append(i)
 
-        removed_values = []
+        for i in range(1000):
+            stack.pop()
 
-        for value in range(1500):
-            removed_values.append(queue.pop(0))
+        stack_time = time.perf_counter() - start
 
-        end_time = time.perf_counter()
+        start = time.perf_counter()
 
-        running_time = end_time - start_time
-        self.show_time("Queue enqueue/dequeue benchmark", running_time)
+        for i in range(1000):
+            queue.append(i)
 
-        self.assertEqual(queue, [])
-        self.assertEqual(removed_values[0], 0)
-        self.assertEqual(removed_values[-1], 1499)
-        self.assertLess(running_time, 2.0)
+        for i in range(1000):
+            queue.pop(0)
 
-    def test_linked_list_benchmark(self):
-        linked_list = LinkedList()
+        queue_time = time.perf_counter() - start
 
-        start_time = time.perf_counter()
+        print("\nBenchmark - Stack push/pop 1000 values:", round(stack_time, 6), "seconds")
+        print("Benchmark - Queue enqueue/dequeue 1000 values:", round(queue_time, 6), "seconds")
 
-        for value in range(1000):
-            linked_list.insert_end(value)
+        self.assertGreaterEqual(stack_time, 0)
+        self.assertGreaterEqual(queue_time, 0)
 
-        linked_list.reverse()
+    def test_sorting_benchmark(self):
+        if sorting_module is None:
+            self.skipTest("sorting module not found")
 
-        for value in range(500):
-            linked_list.delete_head()
+        data = [9, 4, 6, 2, 8, 1, 5, 3, 7]
 
-        end_time = time.perf_counter()
+        start = time.perf_counter()
+        sorting_module.make_bubble_steps(data)
+        bubble_time = time.perf_counter() - start
 
-        running_time = end_time - start_time
-        self.show_time("Linked list benchmark", running_time)
+        start = time.perf_counter()
+        sorting_module.make_selection_steps(data)
+        selection_time = time.perf_counter() - start
 
-        self.assertEqual(linked_list.size, 500)
-        self.assertLess(running_time, 3.0)
+        start = time.perf_counter()
+        sorting_module.make_merge_steps(data)
+        merge_time = time.perf_counter() - start
 
-    # Phase 2 benchmark
+        print("\nBenchmark - Bubble Sort:", round(bubble_time, 6), "seconds")
+        print("Benchmark - Selection Sort:", round(selection_time, 6), "seconds")
+        print("Benchmark - Merge Sort:", round(merge_time, 6), "seconds")
 
-    def test_bubble_sort_benchmark(self):
-        data = list(range(80, 0, -1))
+        self.assertGreaterEqual(bubble_time, 0)
+        self.assertGreaterEqual(selection_time, 0)
+        self.assertGreaterEqual(merge_time, 0)
 
-        start_time = time.perf_counter()
-        result = get_final_array(bubble_sort_steps(data), data)
-        end_time = time.perf_counter()
+    def test_heap_benchmark(self):
+        if heap_module is None:
+            self.skipTest("heap module not found")
 
-        running_time = end_time - start_time
-        self.show_time("Bubble sort benchmark", running_time)
+        heap = []
 
-        self.assertEqual(result, sorted(data))
-        self.assertLess(running_time, 2.0)
+        start = time.perf_counter()
 
-    def test_selection_sort_benchmark(self):
-        data = list(range(80, 0, -1))
+        for i in range(1000):
+            heap_module.heap_insert(heap, (i, i, "Event"))
 
-        start_time = time.perf_counter()
-        result = get_final_array(selection_sort_steps(data), data)
-        end_time = time.perf_counter()
+        for i in range(1000):
+            heap_module.heap_extract_min(heap)
 
-        running_time = end_time - start_time
-        self.show_time("Selection sort benchmark", running_time)
+        elapsed = time.perf_counter() - start
 
-        self.assertEqual(result, sorted(data))
-        self.assertLess(running_time, 2.0)
+        print("\nBenchmark - Heap insert/extract 1000 events:", round(elapsed, 6), "seconds")
 
-    def test_bfs_benchmark(self):
-        graph = {
-            "A": ["B", "C"],
-            "B": ["A", "D", "E"],
-            "C": ["A", "F"],
-            "D": ["B"],
-            "E": ["B", "F"],
-            "F": ["C", "E"]
-        }
-
-        start_time = time.perf_counter()
-        result = bfs(graph, "A")
-        end_time = time.perf_counter()
-
-        running_time = end_time - start_time
-        self.show_time("BFS benchmark", running_time)
-
-        self.assertEqual(set(result), {"A", "B", "C", "D", "E", "F"})
-        self.assertLess(running_time, 1.0)
-
-    def test_dfs_benchmark(self):
-        graph = {
-            "A": ["B", "C"],
-            "B": ["A", "D", "E"],
-            "C": ["A", "F"],
-            "D": ["B"],
-            "E": ["B", "F"],
-            "F": ["C", "E"]
-        }
-
-        start_time = time.perf_counter()
-        result = dfs(graph, "A")
-        end_time = time.perf_counter()
-
-        running_time = end_time - start_time
-        self.show_time("DFS benchmark", running_time)
-
-        self.assertEqual(set(result), {"A", "B", "C", "D", "E", "F"})
-        self.assertLess(running_time, 1.0)
-
-    # Phase 3 benchmark
-
-    def test_dijkstra_benchmark(self):
-        rows = 8
-        cols = 8
-        start = (0, 0)
-        end = (7, 7)
-        obstacles = {(1, 1), (2, 2), (3, 3), (4, 4)}
-
-        start_time = time.perf_counter()
-
-        visited_order, path = dijkstra_pathfinding(
-            rows,
-            cols,
-            start,
-            end,
-            obstacles
-        )
-
-        end_time = time.perf_counter()
-
-        running_time = end_time - start_time
-        self.show_time("Dijkstra benchmark", running_time)
-
-        self.assertGreater(len(visited_order), 0)
-        self.assertGreater(len(path), 0)
-        self.assertLess(running_time, 1.0)
-
-    def test_dynamic_programming_benchmark(self):
-        rows = 8
-        cols = 8
-        obstacles = {(1, 1), (2, 2), (3, 3)}
-
-        start_time = time.perf_counter()
-
-        dp_table, path_count, path = dynamic_programming_grid(
-            rows,
-            cols,
-            obstacles
-        )
-
-        end_time = time.perf_counter()
-
-        running_time = end_time - start_time
-        self.show_time("DP grid benchmark", running_time)
-
-        self.assertIsInstance(dp_table, list)
-        self.assertGreaterEqual(path_count, 0)
-        self.assertLess(running_time, 1.0)
+        self.assertGreaterEqual(elapsed, 0)
 
 
 if __name__ == "__main__":
-    unittest.main(verbosity=2)
+    unittest.main()

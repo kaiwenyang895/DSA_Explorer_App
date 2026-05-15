@@ -1,99 +1,122 @@
-#pygame
 import pygame
-# for system exit
 import sys
-from data_structures import run_data_structures_module
-from sorting_visualizer import run_sorting_module
-from graph_visualizer import run_graph_module
-from puzzle_module import run_puzzle_module
-#initial the window
-pygame.init()
-# Window size 900600  !!Preparing in advance is safer
-WIDTH = 900
-HEIGHT = 600
 
-# creat the window,
+# import the main module pages
+from data_structures import run_data_structures_module
+from algorithms_menu import run_algorithms_menu
+from puzzle_module import run_puzzle_module
+
+
+pygame.init()
+
+# window size for the whole app
+WIDTH = 1100
+HEIGHT = 700
+
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-#tital of the window
 pygame.display.set_caption("DSA Explorer and Visualiser App")
-#Limiting the program's refresh doesn't really do much here,
-# but I included it since I learned it.
+
+# clock is used to control FPS
 clock = pygame.time.Clock()
 
-# Fonts for tittle button and others
 title_font = pygame.font.SysFont(None, 48)
-button_font = pygame.font.SysFont(None, 32)
-small_font = pygame.font.SysFont(None, 26)
+button_font = pygame.font.SysFont(None, 30)
+small_font = pygame.font.SysFont(None, 24)
 
-# just colors
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 LIGHT_BLUE = (173, 216, 230)
-DARK_BLUE = (70, 130, 180)
+LIGHT_GREEN = (144, 238, 144)
+YELLOW = (255, 255, 153)
 LIGHT_GRAY = (230, 230, 230)
-GREEN = (144, 238, 144)
+ORANGE = (255, 204, 153)
 
-#
+
 def draw_text(text, font, colour, x, y):
-    #Convert plain text into an image object that Pygame can display.
-    #true for Anti-aliasing
     text_surface = font.render(text, True, colour)
     screen.blit(text_surface, (x, y))
 
-# rect is the position and size
-def draw_button(text, rect, colour):
-    pygame.draw.rect(screen, colour, rect)
-    #Draw a black border around the button.
 
-#The final 2 indicates that the border thickness is 2 pixels.
+def draw_button(text, rect, colour):
+    # draw button with border
+    pygame.draw.rect(screen, colour, rect)
     pygame.draw.rect(screen, BLACK, rect, 2)
 
+    # put the text in middle of button
     text_surface = button_font.render(text, True, BLACK)
     text_rect = text_surface.get_rect(center=rect.center)
-    #dipict on the screen
     screen.blit(text_surface, text_rect)
 
 
-def show_placeholder_page(module_name):
-    """
-    This is a temporary page for each module.
-    Later we will replace this with real visualisation.
-    """
+def testing_summary_page():
+    # this page is not running tests, only show testing info
     running = True
 
-    back_button = pygame.Rect(30, 30, 120, 45)
+    back_button = pygame.Rect(25, 25, 95, 40)
 
     while running:
         screen.fill(WHITE)
 
         draw_button("Back", back_button, LIGHT_GRAY)
 
-        draw_text(module_name, title_font, BLACK, 260, 120)
+        draw_text(
+            "Testing Summary",
+            title_font,
+            BLACK,
+            390,
+            80
+        )
 
         draw_text(
-            "This module page is working.",
+            "Automated tests are written in a separate Python file:",
             small_font,
             BLACK,
-            280,
+            260,
+            160
+        )
+
+        draw_text(
+            "test_algorithms.py",
+            button_font,
+            BLACK,
+            430,
             200
         )
 
         draw_text(
-            "Later we will add Pygame visualisation here.",
-            small_font,
-            BLACK,
-            240,
-            240
-        )
-
-        draw_text(
-            "Press Back to return to Main Menu.",
+            "Run command:",
             small_font,
             BLACK,
             260,
-            280
+            270
         )
 
+        draw_text(
+            "python -m unittest test_algorithms.py",
+            button_font,
+            BLACK,
+            340,
+            310
+        )
+
+        draw_text(
+            "The tests check the algorithm logic, such as stack, queue, sorting, graph, heap and DP.",
+            small_font,
+            BLACK,
+            180,
+            390
+        )
+
+
+        draw_text(
+            "This page is only a testing summary. The real automated tests are still in test_algorithms.py.",
+            small_font,
+            BLACK,
+            170,
+            500
+        )
+
+        # only need back button and quit event on this page
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
@@ -108,85 +131,82 @@ def show_placeholder_page(module_name):
         pygame.display.update()
         clock.tick(60)
 
-#important
+
 def main_menu():
-# show the window
+    # main page for choosing different parts of the app
     running = True
-# creat the button and the position
-    data_button = pygame.Rect(300, 160, 300, 55)
-    sorting_button = pygame.Rect(300, 230, 300, 55)
-    graph_button = pygame.Rect(300, 300, 300, 55)
-    puzzle_button = pygame.Rect(300, 370, 300, 55)
-#Start the main menu loop. As long as the program hasn’t exited,
-# the main menu will keep refreshing.
+
+    # menu buttons position
+    data_button = pygame.Rect(400, 170, 300, 55)
+    algorithms_button = pygame.Rect(400, 250, 300, 55)
+    puzzle_button = pygame.Rect(400, 330, 300, 55)
+    tests_button = pygame.Rect(400, 410, 300, 55)
+
     while running:
-        #background
         screen.fill(WHITE)
-#DSA Explorer and Visualiser App our title
+
         draw_text(
             "DSA Explorer and Visualiser App",
             title_font,
             BLACK,
-            160,
-            70
+            250,
+            80
         )
 
         draw_text(
             "Main Menu",
             small_font,
             BLACK,
-            395,
-            130
+            500,
+            135
         )
 
+        # four main choices in the app
         draw_button("Data Structures", data_button, LIGHT_BLUE)
-        draw_button("Sorting Algorithms", sorting_button, LIGHT_BLUE)
-        draw_button("Graph Algorithms", graph_button, LIGHT_BLUE)
-        draw_button("Puzzle Challenges", puzzle_button, LIGHT_BLUE)
+        draw_button("Algorithms", algorithms_button, LIGHT_GREEN)
+        draw_button("Puzzle Challenges", puzzle_button, YELLOW)
+        draw_button("Tests", tests_button, ORANGE)
 
         draw_text(
-            "Click a button to open a module.",
+            "u3290623_7170",
             small_font,
             BLACK,
-            310,
-            460
+            490,
+            500
         )
-#This code is used to get all current user events. such as click and close
+
+        # handle user mouse click
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
 
             if event.type == pygame.MOUSEBUTTONDOWN:
-                #Get the position of the mouse click.
                 mouse_pos = event.pos
-#Here, screen and clock are passed in
-  #so that the submodules can use the same window and refresh controller.
+
+                # open data structures menu
                 if data_button.collidepoint(mouse_pos):
                     run_data_structures_module(screen, clock)
 
+                # open algorithm menu
+                elif algorithms_button.collidepoint(mouse_pos):
+                    run_algorithms_menu(screen, clock)
 
-                elif sorting_button.collidepoint(mouse_pos):
-
-                    run_sorting_module(screen, clock)
-
-
-                elif graph_button.collidepoint(mouse_pos):
-
-                    run_graph_module(screen, clock)
-
+                # open puzzle and DP page
                 elif puzzle_button.collidepoint(mouse_pos):
                     run_puzzle_module(screen, clock)
-#It doesn't have much significance in this assignment, because the
-        # images haven't been updated much,
-        # but it can be used for future expansion.
+
+                # open testing summary page
+                elif tests_button.collidepoint(mouse_pos):
+                    testing_summary_page()
+
+        # refresh main window
         pygame.display.update()
         clock.tick(60)
 
     pygame.quit()
     sys.exit()
 
-#The following code will only execute when this file is run directly.
-#It's not useful in this assignment either.
+
+# #########start the app from main menu
 if __name__ == "__main__":
-    # start the program, that is useful lol
     main_menu()
